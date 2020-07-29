@@ -7,6 +7,8 @@ import pickle
 import datetime
 import pandas as pd
 
+from config import ROOT_DIR
+
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
 
 SURVEY_SPREADSHEET_ID = '10HcqHVwEoqc5l0GybdI0O8WWd7-iDT9NbxFycnmPA3g'
@@ -105,9 +107,9 @@ def main():
     survey_df = pd.DataFrame(survey_data[0:], columns=sheet_headers())
 
     utc_datetime = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-    os.chdir("..")
-    os.chdir("..")
-    os.chdir('data/raw')
+
+    raw_data_path = os.path.join(os.path.join(ROOT_DIR, "data"), "raw")
+    os.chdir(raw_data_path)
     survey_df.to_csv(f"survey_raw_{utc_datetime}.csv")
 
 
