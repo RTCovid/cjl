@@ -1,3 +1,14 @@
+# Ignore all data directories
+data/interim/*.csv
+data/processed/*.csv
+data/raw/*.csv
+
+src/data/*.csv
+src/data/*.json
+src/data/*.pickle
+
+*.csv
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
