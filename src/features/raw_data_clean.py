@@ -5,6 +5,7 @@ import numpy as np
 
 import datetime
 
+import string
 from fuzzywuzzy import fuzz
 
 from config import ROOT_DIR
@@ -30,6 +31,9 @@ def append_all_csv():
     return all_raw_df_dedupe
 
 
+# TODO: Rename headers?
+
+
 def cast_datatypes(df):
     df = df.applymap(str)
 
@@ -47,30 +51,30 @@ def clean_gender_field(df):
     # TODO: Best way to use fuzzy matching in this case? Even use it at all? Try to capture spelling errors like "femake", "mail", etc
     # http://jonathansoma.com/lede/algorithms-2017/classes/fuzziness-matplotlib/fuzzing-matching-in-pandas-with-fuzzywuzzy/
 
-    # First, convert everything to uppercase
-    df['What is your gender?'] = df['What is your gender?'].str.upper()
+    # TODO: Spellchecker? https://pypi.org/project/pyspellchecker/
 
     def fuzzy_match_gender(row):
-        if row['What is your gender?'] == 'FEMALE':
-            return 'FEMALE'
-        elif row['What is your gender?'] == 'F':
-            return 'FEMALE'
-        elif row['What is your gender?'] == 'MALE':
-            return 'MALE'
-        elif row['What is your gender?'] == 'M':
-            return 'MALE'
+        # Convert string to uppercase
+        string_upper = row['What is your gender?'].upper()
+
+        # Remove punctuation/symbols
+        string_upper_strip_punc = string_upper.translate(str.maketrans('', '', string.punctuation))
+
+        # Manual inference/typo correction
+        if string_upper_strip_punc in ['FEMALE', 'F', 'WOMAN', 'WOMEN', 'FEMALES', 'FEMAIL', 'FEMAILE', 'FEMAL', 'FEMAKE', 'SHE', 'HER', 'SHEHER', 'SHE/HER', 'SHE-HER', 'TRANS FEMALE', 'TRANSFEMALE', 'TRANS WOMAN', 'TRANSWOMAN', 'CISGENDER WOMAN', 'CIS GENDER WOMAN', 'CISGENDERED WOMAN', 'CIS GENDERED WOMAN', 'CISGENDER FEMALE', 'CIS GENDER FEMALE', 'CISGENDERED FEMALE', 'CIS GENDERED FEMALE',]:
+            return 'Female'
+        elif string_upper_strip_punc in ['MALE', 'M', 'MAN', 'MEN', 'MALES', 'MAIL', 'MAILE', 'MAL', 'MAKE', 'HE', 'HIM', 'HEHIM', 'HE/HIM', 'HE-HIM', 'TRANS MALE', 'TRANSMALE', 'TRANS MAN', 'TRANSMAN', 'CISGENDER MAN', 'CIS GENDER MAN', 'CISGENDERED MAN', 'CIS GENDERED MAN', 'CISGENDER MAN', 'CIS GENDER MAN', 'CISGENDERED MAN', 'CIS GENDERED MAN',]:
+            return 'Male'
+        elif string_upper_strip_punc in ['NON-BINARY', 'NON BINARY', 'NONBINARY', 'NONE BINARY']:
+            return 'Non-Binary'
         # elif fuzz.token_set_ratio(row['What is your gender?'], "FEMALE") > 0.8:
         #     return 'FEMALE'
         # elif fuzz.token_set_ratio(row['What is your gender?'], "MALE") > 0.8:
         #     return 'MALE'
         else:
-            return 'OTHER'
+            return 'Other'
 
     df['What is your gender? (cleaned)'] = df.apply(lambda row: fuzzy_match_gender(row), axis=1)
-
-    # Finally, re-convert to title case
-    df['What is your gender?'] = df['What is your gender?'].str.title()
-    df['What is your gender? (cleaned)'] = df['What is your gender? (cleaned)'].str.title()
 
     return df
 
@@ -90,61 +94,6 @@ def replace_with_other(col_name, df):
 
 
 def grouping_aggregation(df):
-
-    # df_grouped = pd.DataFrame.groupby(by=[
-    #     "What is your zip code?",
-    #     "Racial or ethnic background: African-American/Black",
-    #     "Racial or ethnic background: American Indian/Alaskan Native",
-    #     "Racial or ethnic background: Asian",
-    #     "Racial or ethnic background: Caucasian/White",
-    #     "Racial or ethnic background: Hispanic/Latinx",
-    #     "Racial or ethnic background: Native Hawaiian/Pacific Islander",
-    #     "Racial or ethnic background: Other",
-    #     "What is your gender?",
-    #     "What is your age?"
-    # ], as_index=False).apply(lambda x: pd.Series({
-    #     'total_respondents': x['Respondent ID'].shape[0],
-    #     'pct_homicide': x['Top 3 public safety problems: Homicide']
-    # }))
-
-    df_grouped = df.groupby(by=[
-        "What is your zip code?",
-        # "Racial or ethnic background: African-American/Black",
-        # "Racial or ethnic background: American Indian/Alaskan Native",
-        # "Racial or ethnic background: Asian",
-        # "Racial or ethnic background: Caucasian/White",
-        # "Racial or ethnic background: Hispanic/Latinx",
-        # "Racial or ethnic background: Native Hawaiian/Pacific Islander",
-        # "Racial or ethnic background: Other",
-        "What is your gender? (cleaned)",
-        "What is your age?"
-    ], as_index=False).agg(
-        total_respondents=('Respondent ID', np.size),
-        # pct_homicide=("Top 3 public safety problems: Homicide", 'count'),
-        # pct_gun_violence=("Top 3 public safety problems: Gun violence", 'count'),
-        # pct_physical_assault=("Top 3 public safety problems: Physical assault", 'count'),
-        # pct_gang_activity=("Top 3 public safety problems: Gang activity", 'count'),
-        # pct_drug_sales=("Top 3 public safety problems: Drug sales", 'count'),
-        # pct_drug_abuse=("Top 3 public safety problems: Drug abuse", 'count'),
-        # pct_robbery=("Top 3 public safety problems: Robbery (e.g., mugging)", 'count'),
-        # pct_sexual_assault=("Top 3 public safety problems: Sexual assault", 'count'),
-        # pct_theft=("Top 3 public safety problems: Theft", 'count'),
-        # pct_burglary_theft_auto=("Top 3 public safety problems: Burglary/theft (auto)", 'count'),
-        # pct_burglary_residence=("Top 3 public safety problems: Burglary (residence)", 'count'),
-        # pct_underage_drinking=("Top 3 public safety problems: Underage drinking", 'count'),
-        # pct_domestic_violence=("Top 3 public safety problems: Domestic violence", 'count'),
-        # pct_disorderly_conduct=("Top 3 public safety problems: Disorderly conduct/noise", 'count'),
-        # pct_vandalism_graffiti=("Top 3 public safety problems: Vandalism/graffiti", 'count'),
-        # pct_prostitution=("Top 3 public safety problems: Prostitution", 'count'),
-        # pct_disorderly_youth=("Top 3 public safety problems: Disorderly youth", 'count'),
-        # pct_homelessness_related_problems=("Top 3 public safety problems: Homelessness-related problems", 'count'),
-        # pct_traffic_issues=("Top 3 public safety problems: Traffic issues", 'count'),
-        # pct_lack_of_police_presence=("Top 3 public safety problems: Lack of police presence", 'count'),
-        # pct_slow_police_response=("Top 3 public safety problems: Slow police response", 'count'),
-        # pct_dont_want_to_answer=("Top 3 public safety problems: Don't want to answer", 'count'),
-        # pct_other=("Top 3 public safety problems: Other", 'count'),
-    )
-
     df = df[[
         "What is your zip code?",
         "What is your gender? (cleaned)",
@@ -205,7 +154,7 @@ def grouping_aggregation(df):
             (df['Racial or ethnic background: Native Hawaiian/Pacific Islander'] == row['Racial or ethnic background: Native Hawaiian/Pacific Islander']) &
             (df['Racial or ethnic background: Other'] == row['Racial or ethnic background: Other']) &
             (df['What is your gender? (cleaned)'] == row['What is your gender? (cleaned)']) &
-            (df['What is your gender? (cleaned)'] == row['What is your gender? (cleaned)'])
+            (df['What is your age?'] == row['What is your age?'])
         ]
 
         total_respondents = float(df_sliced.shape[0])
@@ -292,7 +241,13 @@ def grouping_aggregation(df):
 def main():
     all_df_raw = append_all_csv()
     all_df_raw_casted = cast_datatypes(all_df_raw)
+
+    print(all_df_raw_casted['What is your gender?'].unique().tolist())
+
     df_gender_cleaned = clean_gender_field(all_df_raw_casted)
+
+    print('# Other gender:', df_gender_cleaned[df_gender_cleaned['What is your gender? (cleaned)'] == 'Other'].shape[0])
+
     # print(df_gender_cleaned[['What is your gender?', 'What is your gender? (imputed)']].sample(n=25))
     all_df_raw_race_other = replace_with_other('Racial or ethnic background: Other', df_gender_cleaned)
     all_df_raw_problems_other = replace_with_other('Top 3 public safety problems: Other', all_df_raw_race_other)
@@ -301,7 +256,7 @@ def main():
     # print(all_df_raw_race_other['Racial or ethnic background: Other'].unique().tolist())
 
     # TODO: Saved cleaned data to data/interim?
-    # TODO: Make new file to do grouping/aggregations?
+    # TODO: Do grouping/aggregations in new .py file?
 
     df_grouped = grouping_aggregation(all_df_raw_problems_other)
 
