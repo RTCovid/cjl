@@ -16,6 +16,8 @@ SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
 SURVEY_SPREADSHEET_ID = '10HcqHVwEoqc5l0GybdI0O8WWd7-iDT9NbxFycnmPA3g'
 SURVEY_RANGE_NAME = 'Sheet!A3:AT'
 
+# TODO: Download `Survey Results w Inferred Gender` sheet
+
 
 def pull_sheet_data():
     creds = None

@@ -33,6 +33,9 @@ def append_all_csv():
 
 # TODO: Rename headers?
 
+# TODO: Drop age < 18 -- do this on backend or reporting layer?
+# TODO: Drop non-Indiana zip codes -- do this on backend or reporting layer?
+
 
 def cast_datatypes(df):
     df = df.applymap(str)
