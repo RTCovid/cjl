@@ -107,16 +107,22 @@ def clean_zip_codes(df):
 def avg_rank_pctile(df):
     for c in df.columns:
         if c != 'Zip Code':
-            df[f"{c}_dense_rank"] = df[c].rank(method="dense", ascending=False)  # TODO: What direction (asc/desc) should each metric be ranked? E.g. are values "better" if higher or lower
-            df[f"{c}_dense_rank_pctile"] = df[c].rank(method="dense", pct=True, ascending=False)
-            df[f"{c}_avg_rank"] = df[c].rank(method="average", ascending=False)
-            df[f"{c}_avg_rank_pctile"] = df[c].rank(method="average", pct=True, ascending=False)
+            df[f"{c}_dense_rank"] = df[c].rank(method="dense", na_option="bottom")  # TODO: What direction (asc/desc) should each metric be ranked? E.g. are values "better" if higher or lower
+            df[f"{c}_dense_rank_pctile"] = df[c].rank(method="dense", pct=True, na_option="bottom")
+            df[f"{c}_avg_rank"] = df[c].rank(method="average", na_option="bottom")
+            df[f"{c}_avg_rank_pctile"] = df[c].rank(method="average", pct=True, na_option="bottom")
 
     def avg_vals_row(row):
-        avg_vals = [row[c] for c in df.columns if c.endswith('_dense_rank')]
-        return statistics.mean(avg_vals)
+        dense_rank_vals = [row[c] for c in df.columns if c.endswith('_dense_rank')]
+        dense_rank_pctile_vals = [row[c] for c in df.columns if c.endswith('_dense_rank_pctile')]
+        avg_rank_vals = [row[c] for c in df.columns if c.endswith('_avg_rank')]
+        avg_rank_pctile_vals = [row[c] for c in df.columns if c.endswith('_avg_rank_pctile')]
 
-    df['dense_rank_overall_avg'] = df.apply(lambda row: avg_vals_row(row), axis=1)
+        return statistics.mean(dense_rank_vals), statistics.mean(dense_rank_pctile_vals), \
+               statistics.mean(avg_rank_vals), statistics.mean(avg_rank_pctile_vals)
+
+    df['overall_avg_dense_rank'], df['overall_avg_dense_rank_pctile'], \
+    df['overall_avg_avg_rank'], df['overall_avg_avg_rank_pctile'] = zip(*df.apply(lambda row: avg_vals_row(row), axis=1))
 
     return df
 
