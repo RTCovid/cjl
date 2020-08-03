@@ -1,5 +1,5 @@
-# cjl-survey
-Data processing for NYU CJL survey
+# NYU Criminal Justice Lab - Public Health & Safety Data Processing
+Data processing for NYU CJL survey and social determinants of public safety data.
 
 *Do not commit anything into the data directory*
 
