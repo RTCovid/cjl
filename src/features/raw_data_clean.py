@@ -8,7 +8,7 @@ import datetime
 import string
 from fuzzywuzzy import fuzz
 
-from config import ROOT_DIR
+from config import *
 
 # download all CSVs from data/raw
 # deduplicate?
@@ -40,7 +40,7 @@ def append_all_csv():
 def cast_datatypes(df):
     df = df.applymap(str)
 
-    # TODO: Cast these fields to datetime
+    # TODO: Cast these fields to datetime -- but doing so seems to interfere with the grouping & aggregation? Revisit this
     # df['Start Date'] = pd.to_datetime(df['Start Date'])
     # df['End Date'] = pd.to_datetime(df['End Date'])
 
