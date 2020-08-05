@@ -31,10 +31,12 @@ def append_all_csv():
     return all_raw_df_dedupe
 
 
-# TODO: Rename headers?
+# TODO: Rename headers
 
-# TODO: Drop age < 18 -- do this on backend or reporting layer?
-# TODO: Drop non-Indiana zip codes -- do this on backend or reporting layer?
+# TODO: Drop "Under 18" -- modularize as `values_to_drop(df, col, val_list):` function
+# TODO: Fill blanks with "Prefer not to answer"
+
+# TODO: Drop non-Indiana zip codes
 
 
 def cast_datatypes(df):
