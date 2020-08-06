@@ -10,10 +10,6 @@ from fuzzywuzzy import fuzz
 
 from config import *
 
-# download all CSVs from data/raw
-# deduplicate?
-# clean
-
 
 def append_all_csv():
     raw_data_path = os.path.join(RAW_DATA_DIR, "survey")
@@ -338,6 +334,10 @@ def main(verbose=False):
     if verbose:
         print("Adding field of all concatenated race/ethnicity selections...")
     df_race_concat = concat_race_ethnicity(df_problems_other)
+
+    interim_survey_data_loc = os.path.join(INTERIM_DATA_DIR, 'survey')
+    os.chdir(interim_survey_data_loc)
+    df_race_concat.to_csv("survey_data_cleaned.csv")
 
     if verbose:
         print("Grouping and aggregating...")
