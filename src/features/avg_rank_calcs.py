@@ -157,7 +157,7 @@ def main():
     health_df_cleaned = clean_zip_codes(health_df)
     crime_df_cleaned = clean_zip_codes(crime_df)
     housing_env_df_cleaned = clean_zip_codes(housing_env_df)
-    educ_df_cleaned = clean_zip_codes(educ_df)
+    # educ_df_cleaned = clean_zip_codes(educ_df)
     income_df_cleaned = clean_zip_codes(income_df)
 
     income_df_cleaned = income_inequality_transform(income_df_cleaned)
@@ -165,19 +165,20 @@ def main():
     health_df_cleaned_ranked = avg_rank_pctile(health_df_cleaned, 'health')
     crime_df_cleaned_ranked = avg_rank_pctile(crime_df_cleaned, 'crime')
     housing_env_df_cleaned_ranked = avg_rank_pctile(housing_env_df_cleaned, 'housing_env')
-    educ_df_cleaned_ranked = avg_rank_pctile(educ_df_cleaned, 'edu')
+    # educ_df_cleaned_ranked = avg_rank_pctile(educ_df_cleaned, 'edu')
     income_df_cleaned_ranked = avg_rank_pctile(income_df_cleaned, 'income')
 
     health_df_cleaned_re_ranked = re_rank_overall_avgs(health_df_cleaned_ranked, 'health')
     crime_df_cleaned_re_ranked = re_rank_overall_avgs(crime_df_cleaned_ranked, 'crime')
     housing_env_df_cleaned_re_ranked = re_rank_overall_avgs(housing_env_df_cleaned_ranked, 'housing_env')
-    educ_df_cleaned_re_ranked = re_rank_overall_avgs(educ_df_cleaned_ranked, 'edu')
+    # educ_df_cleaned_re_ranked = re_rank_overall_avgs(educ_df_cleaned_ranked, 'edu')
     income_df_cleaned_re_ranked = re_rank_overall_avgs(income_df_cleaned_ranked, 'income')
 
     merge_health_crime = pd.merge(left=health_df_cleaned_re_ranked, right=crime_df_cleaned_re_ranked, how='outer', on='Zip Code')
-    merge_housing_edu = pd.merge(left=housing_env_df_cleaned_re_ranked, right=educ_df_cleaned_re_ranked, how='outer', on='Zip Code')
-    merge_health_crime_housing_edu = pd.merge(left=merge_health_crime, right=merge_housing_edu, how='outer', on='Zip Code')
-    final_joined_df = pd.merge(left=merge_health_crime_housing_edu, right=income_df_cleaned_re_ranked, how='outer', on='Zip Code')
+    # merge_housing_edu = pd.merge(left=housing_env_df_cleaned_re_ranked, right=educ_df_cleaned_re_ranked, how='outer', on='Zip Code')
+    merge_housing_income = pd.merge(left=housing_env_df_cleaned_re_ranked, right=income_df_cleaned_re_ranked, how='outer', on='Zip Code')
+    # merge_health_crime_housing_edu = pd.merge(left=merge_health_crime, right=merge_housing_edu, how='outer', on='Zip Code')
+    final_joined_df = pd.merge(left=merge_health_crime, right=merge_housing_income, how='outer', on='Zip Code')
 
     def overall_avg_vals_row(row):
         avg_rank_pctile_vals = [row[c] for c in final_joined_df.columns if c.startswith('avg_pctile_RANK_category_') and c not in ['Zip Code', 'Income Inequality']]
@@ -221,4 +222,4 @@ def metric_ranges():
 
 main()
 
-metric_ranges()
+# metric_ranges()
