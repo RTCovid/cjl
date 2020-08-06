@@ -337,7 +337,7 @@ def main(verbose=False):
 
     interim_survey_data_loc = os.path.join(INTERIM_DATA_DIR, 'survey')
     os.chdir(interim_survey_data_loc)
-    df_race_concat.to_csv("survey_data_cleaned.csv")
+    df_race_concat.to_csv("survey_data_cleaned.csv", index=False)
 
     if verbose:
         print("Grouping and aggregating...")
