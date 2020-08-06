@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import os
 import sys
 
@@ -119,35 +120,26 @@ def avg_rank_pctile(df, metric_category):
     metric_rank_order_df = pd.read_csv(os.path.join(RAW_DATA_DIR, "metric_rankorder_and_category.csv"))
 
     for c in df.columns:
-        if c != 'Zip Code':
+        if c not in ['Zip Code', 'Income Inequality']:
 
             try:
-                if metric_rank_order_df[metric_rank_order_df["Metric"] == c]["Rank Direction"].iloc[0] == 'desc':
-                    metric_rank_order = True
-                else:
-                    metric_rank_order = False
+                metric_rank_order = metric_rank_order_df[metric_rank_order_df["Metric"] == c]["Rank Direction"].iloc[0] == 'desc'
             except Exception as e:
                 print(f"Error with column `{c}`:", e)
                 metric_rank_order = False
 
             # df[f"{c}_dense_rank"] = df[c].rank(method="dense", na_option="bottom")
             # df[f"{c}_dense_rank_pctile"] = df[c].rank(method="dense", pct=True, na_option="bottom")
-            # df[f"{c}_avg_rank"] = df[c].rank(method="average", na_option="bottom")
-            df[f"{c}_avg_rank_pctile"] = df[c].rank(method="average", pct=True, na_option="keep", ascending=metric_rank_order)
+            df[f"{c}_rank"] = np.floor(df[c].rank(method="average", pct=False, na_option="keep", ascending=metric_rank_order))
+            df[f"{c}_pctile"] = df[c].rank(method="average", pct=True, na_option="keep", ascending=metric_rank_order)
 
     def avg_vals_row(row):
-        # dense_rank_vals = [row[c] for c in df.columns if c.endswith('_dense_rank')]
-        # dense_rank_pctile_vals = [row[c] for c in df.columns if c.endswith('_dense_rank_pctile')]
-        # avg_rank_vals = [row[c] for c in df.columns if c.endswith('_avg_rank')]
-        avg_rank_pctile_vals = [row[c] for c in df.columns if c.endswith('_avg_rank_pctile')]
+        avg_rank_pctile_vals = [row[c] for c in df.columns if c.endswith('_pctile') and c not in ['Zip Code', 'Income Inequality']]
 
         # statistics.mean(dense_rank_vals), statistics.mean(dense_rank_pctile_vals), statistics.mean(avg_rank_vals),
-        return statistics.mean(avg_rank_pctile_vals)
+        return np.nanmean(avg_rank_pctile_vals)  # TODO: Make sure this is handling NA's properly (ignore from numerator and denominator)
 
-    # df[f'overall_avg_dense_rank_{metric_category}'], \
-    # df[f'overall_avg_dense_rank_pctile_{metric_category}'], \
-    # df[f'overall_avg_avg_rank_{metric_category}'], \
-    df[f'overall_avg_avg_rank_pctile_{metric_category}'] = df.apply(lambda row: avg_vals_row(row), axis=1)
+    df[f'avg_pctile_category_{metric_category}'] = df.apply(lambda row: avg_vals_row(row), axis=1)
 
     # TODO: Rank NaN's last, then fill rank with NaN -- is this taken care of with df[c].rank(..., na_option="keep", ...) ?
 
@@ -155,10 +147,8 @@ def avg_rank_pctile(df, metric_category):
 
 
 def re_rank_overall_avgs(df, metric_category):
-    # df[f"overall_avg_dense_rank_RANK_{metric_category}"] = df[f'overall_avg_dense_rank_{metric_category}'].rank(method="dense", na_option="bottom")
-    # df[f"overall_avg_dense_rank_pctile_RANK_{metric_category}"] = df[f'overall_avg_dense_rank_pctile_{metric_category}'].rank(method="dense", na_option="bottom")
-    # df[f"overall_avg_avg_rank_RANK_{metric_category}"] = df[f'overall_avg_avg_rank_{metric_category}'].rank(method="dense", na_option="bottom")
-    df[f"overall_avg_avg_rank_pctile_RANK_{metric_category}"] = df[f'overall_avg_avg_rank_pctile_{metric_category}'].rank(method="average", pct=True, na_option="keep")
+    df[f"avg_pctile_RANK_category_{metric_category}"] = df[f'avg_pctile_category_{metric_category}'].rank(method="average", pct=True, na_option="keep", ascending=False)
+    df[f"avg_RANK_category_{metric_category}"] = np.floor(df[f'avg_pctile_RANK_category_{metric_category}'].rank(method="average", pct=False, na_option="keep", ascending=False))
 
     return df
 
@@ -184,26 +174,20 @@ def main():
     educ_df_cleaned_re_ranked = re_rank_overall_avgs(educ_df_cleaned_ranked, 'edu')
     income_df_cleaned_re_ranked = re_rank_overall_avgs(income_df_cleaned_ranked, 'income')
 
-    # health_df_cleaned_re_ranked.to_csv(os.path.join(PROCESSED_DATA_DIR, 'health_df_cleaned_ranked.csv'), index=False)
-    # crime_df_cleaned_re_ranked.to_csv(os.path.join(PROCESSED_DATA_DIR, 'crime_df_cleaned_ranked.csv'), index=False)
-    # housing_env_df_cleaned_re_ranked.to_csv(os.path.join(PROCESSED_DATA_DIR, 'housing_env_df_cleaned_ranked.csv'), index=False)
-    # educ_df_cleaned_re_ranked.to_csv(os.path.join(PROCESSED_DATA_DIR, 'educ_df_cleaned_ranked.csv'), index=False)
-
-    # dfs = [health_df_cleaned_re_ranked, crime_df_cleaned_re_ranked, housing_env_df_cleaned_re_ranked, educ_df_cleaned_re_ranked]
-    # final_joined_df = pd.concat(dfs, axis=1, join='outer')
-
     merge_health_crime = pd.merge(left=health_df_cleaned_re_ranked, right=crime_df_cleaned_re_ranked, how='outer', on='Zip Code')
     merge_housing_edu = pd.merge(left=housing_env_df_cleaned_re_ranked, right=educ_df_cleaned_re_ranked, how='outer', on='Zip Code')
     merge_health_crime_housing_edu = pd.merge(left=merge_health_crime, right=merge_housing_edu, how='outer', on='Zip Code')
     final_joined_df = pd.merge(left=merge_health_crime_housing_edu, right=income_df_cleaned_re_ranked, how='outer', on='Zip Code')
 
     def overall_avg_vals_row(row):
-        avg_rank_pctile_vals = [row[c] for c in final_joined_df.columns if c.startswith('overall_avg_avg_rank_pctile_RANK_')]
-        return statistics.mean(avg_rank_pctile_vals)
+        avg_rank_pctile_vals = [row[c] for c in final_joined_df.columns if c.startswith('avg_pctile_RANK_category_') and c not in ['Zip Code', 'Income Inequality']]
+        return np.nanmean(avg_rank_pctile_vals)
 
     final_joined_df["overall_avg_rank_pctile_all_categories"] = final_joined_df.apply(lambda row: overall_avg_vals_row(row), axis=1)
-    final_joined_df["overall_avg_rank_pctile_all_categories_RERANK"] = final_joined_df["overall_avg_rank_pctile_all_categories"].rank(method="average", pct=True, na_option="keep")
+    final_joined_df["overall_avg_rank_pctile_all_categories_RERANK_pctile"] = final_joined_df["overall_avg_rank_pctile_all_categories"].rank(method="average", pct=True, na_option="keep", ascending=False)
+    final_joined_df["overall_avg_rank_pctile_all_categories_RERANK"] = np.floor(final_joined_df["overall_avg_rank_pctile_all_categories"].rank(method="average", pct=False, na_option="keep", ascending=False))
 
+    # TODO: Fill blank rank columns with df.shape[0] ?
     final_joined_df.to_csv(os.path.join(PROCESSED_DATA_DIR, 'all_ranked_metrics.csv'), index=False)
 
 

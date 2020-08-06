@@ -7,16 +7,14 @@ import pickle
 import datetime
 import pandas as pd
 
-from config import ROOT_DIR
+from config import *
 
 # Python-Google Sheets instructions here: https://developers.google.com/sheets/api/quickstart/python
 
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
 
 SURVEY_SPREADSHEET_ID = '10HcqHVwEoqc5l0GybdI0O8WWd7-iDT9NbxFycnmPA3g'
-SURVEY_RANGE_NAME = 'Sheet!A3:AT'
-
-# TODO: Download `Survey Results w Inferred Gender` sheet
+SURVEY_RANGE_NAME = 'Survey Results w Inferred Gender!A3:AV'
 
 
 def pull_sheet_data():
@@ -59,6 +57,7 @@ def sheet_headers():
         "Collector ID",
         "Start Date",
         "End Date",
+        "Duration",
         "IP Address",
         "Email Address",
         "First Name",
@@ -91,9 +90,10 @@ def sheet_headers():
         "What conditions must be present for the community to be safe and equitable?",
         "What changes must occur to make an equitable and accountable public safety system?",
         "What else should be considered (perspectives, knowledge, data, resources) as we begin this work?",
-        "What is your zip code?",
-        "What is your age?",
-        "What is your gender?",
+        "Zip Code",
+        "Age",
+        "Gender",
+        "Gender (Inferred)",
         "Racial or ethnic background: African-American/Black",
         "Racial or ethnic background: American Indian/Alaskan Native",
         "Racial or ethnic background: Asian",
@@ -112,8 +112,9 @@ def main():
 
     utc_datetime = datetime.datetime.utcnow().strftime('%Y-%m-%d %H_%M_%S')  # TODO: Better formatting
 
-    raw_data_path = os.path.join(os.path.join(ROOT_DIR, "data"), "raw")
+    raw_data_path = os.path.join(RAW_DATA_DIR, "survey")
     os.chdir(raw_data_path)
+
     try:
         survey_df.to_csv(f"survey_raw_{utc_datetime}.csv", index=False)
         print(f"Success! Saved raw survey data ({survey_df.shape[1]} columns x {survey_df.shape[0]} rows) as 'survey_raw_{utc_datetime}.csv'")
