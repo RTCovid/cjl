@@ -67,6 +67,7 @@ HOUSING_ENVIRONMENT_METRICS = [
     'Lead exposure risk index',
     'Park access',
     'Racial/ethnic diversity',
+    'Housing with potential lead risk',
 ]
 
 INCOME_METRICS = [
@@ -115,26 +116,24 @@ def income_inequality_transform(df):
     return df
 
 
-def avg_rank_pctile(df, metric_category):
+def avg_rank_pctile(df, metric_category, exclude_fields):
 
     metric_rank_order_df = pd.read_csv(os.path.join(RAW_DATA_DIR, "metric_rankorder_and_category.csv"))
 
     for c in df.columns:
-        if c not in ['Zip Code', 'Income Inequality']:
+        if c not in exclude_fields:
 
             try:
                 metric_rank_order = metric_rank_order_df[metric_rank_order_df["Metric"] == c]["Rank Direction"].iloc[0] == 'desc'
             except Exception as e:
                 print(f"Error with column `{c}`:", e)
-                metric_rank_order = False
+                metric_rank_order = True
 
-            # df[f"{c}_dense_rank"] = df[c].rank(method="dense", na_option="bottom")
-            # df[f"{c}_dense_rank_pctile"] = df[c].rank(method="dense", pct=True, na_option="bottom")
             df[f"{c}_rank"] = np.floor(df[c].rank(method="average", pct=False, na_option="keep", ascending=metric_rank_order))
             df[f"{c}_pctile"] = df[c].rank(method="average", pct=True, na_option="keep", ascending=metric_rank_order)
 
     def avg_vals_row(row):
-        avg_rank_pctile_vals = [row[c] for c in df.columns if c.endswith('_pctile') and c not in ['Zip Code', 'Income Inequality']]
+        avg_rank_pctile_vals = [row[c] for c in df.columns if c.endswith('_pctile') and c not in exclude_fields]
 
         # statistics.mean(dense_rank_vals), statistics.mean(dense_rank_pctile_vals), statistics.mean(avg_rank_vals),
         return np.nanmean(avg_rank_pctile_vals)  # TODO: Make sure this is handling NA's properly (ignore from numerator and denominator)
@@ -147,6 +146,9 @@ def avg_rank_pctile(df, metric_category):
 
 
 def re_rank_overall_avgs(df, metric_category):
+    # Re-ranking is done on percentile fields (each is in range: [0, 1])
+    # So an average near the 100th percentile indicates worse outcomes.
+    # Thus, average percentile should be ranked desc, since larger values are worse
     df[f"avg_pctile_RANK_category_{metric_category}"] = df[f'avg_pctile_category_{metric_category}'].rank(method="average", pct=True, na_option="keep", ascending=False)
     df[f"avg_RANK_category_{metric_category}"] = np.floor(df[f'avg_pctile_RANK_category_{metric_category}'].rank(method="average", pct=False, na_option="keep", ascending=False))
 
@@ -162,11 +164,13 @@ def main():
 
     income_df_cleaned = income_inequality_transform(income_df_cleaned)
 
-    health_df_cleaned_ranked = avg_rank_pctile(health_df_cleaned, 'health')
-    crime_df_cleaned_ranked = avg_rank_pctile(crime_df_cleaned, 'crime')
-    housing_env_df_cleaned_ranked = avg_rank_pctile(housing_env_df_cleaned, 'housing_env')
-    educ_df_cleaned_ranked = avg_rank_pctile(educ_df_cleaned, 'edu')
-    income_df_cleaned_ranked = avg_rank_pctile(income_df_cleaned, 'income')
+    EXCLUDE_FIELDS_FROM_AVG = ['Zip Code', 'Income Inequality', 'Lead exposure risk index']
+
+    health_df_cleaned_ranked = avg_rank_pctile(health_df_cleaned, 'health', EXCLUDE_FIELDS_FROM_AVG)
+    crime_df_cleaned_ranked = avg_rank_pctile(crime_df_cleaned, 'crime', EXCLUDE_FIELDS_FROM_AVG)
+    housing_env_df_cleaned_ranked = avg_rank_pctile(housing_env_df_cleaned, 'housing_env', EXCLUDE_FIELDS_FROM_AVG)
+    educ_df_cleaned_ranked = avg_rank_pctile(educ_df_cleaned, 'edu', EXCLUDE_FIELDS_FROM_AVG)
+    income_df_cleaned_ranked = avg_rank_pctile(income_df_cleaned, 'income', EXCLUDE_FIELDS_FROM_AVG)
 
     health_df_cleaned_re_ranked = re_rank_overall_avgs(health_df_cleaned_ranked, 'health')
     crime_df_cleaned_re_ranked = re_rank_overall_avgs(crime_df_cleaned_ranked, 'crime')
@@ -180,7 +184,7 @@ def main():
     final_joined_df = pd.merge(left=merge_health_crime_housing_edu, right=income_df_cleaned_re_ranked, how='outer', on='Zip Code')
 
     def overall_avg_vals_row(row):
-        avg_rank_pctile_vals = [row[c] for c in final_joined_df.columns if c.startswith('avg_pctile_RANK_category_') and c not in ['Zip Code', 'Income Inequality']]
+        avg_rank_pctile_vals = [row[c] for c in final_joined_df.columns if c.startswith('avg_pctile_RANK_category_') and c not in EXCLUDE_FIELDS_FROM_AVG]
         return np.nanmean(avg_rank_pctile_vals)
 
     final_joined_df["overall_avg_rank_pctile_all_categories"] = final_joined_df.apply(lambda row: overall_avg_vals_row(row), axis=1)
